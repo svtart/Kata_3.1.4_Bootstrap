@@ -3,70 +3,59 @@ package ru.kata.spring.boot_security.demo.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import ru.kata.spring.boot_security.demo.dao.RoleDao;
-import ru.kata.spring.boot_security.demo.dao.UserDao;
+import org.springframework.transaction.annotation.Transactional;
 import ru.kata.spring.boot_security.demo.model.User;
+import ru.kata.spring.boot_security.demo.repository.UserRepository;
 
-import javax.transaction.Transactional;
 import java.util.Collections;
 import java.util.List;
 
+
 @Service
+@Transactional
 public class UserServiceImpl implements UserService {
 
-    private final UserDao userDao;
-    private final RoleDao roleDao;
+    private UserRepository userRepository;
 
 
-    final PasswordEncoder encoder;
+    public UserServiceImpl(UserRepository userRepository) {
+        this.userRepository = userRepository;
 
-
-    @Autowired
-    public UserServiceImpl(UserDao userDao, RoleDao roleDao, @Lazy PasswordEncoder encoder) {
-        this.userDao = userDao;
-        this.roleDao = roleDao;
-        this.encoder = encoder;
     }
 
+
+
     @Override
-    @Transactional
     public void addUser(User user) {
-        user.setPassword(encoder.encode(user.getPassword()));
-        user.setRoles(Collections.singleton(roleDao.getRoleByName("ROLE_USER")));
-        this.userDao.addUser(user);
+        userRepository.addUser(user);
     }
 
     @Override
-    @Transactional
-    public void updateUser(User user) {
-        user.setPassword(encoder.encode(user.getPassword()));
-        user.setRoles(roleDao.getRolesByName(user.getRoles()));
-        this.userDao.updateUser(user);
+    public void deleteUser(Long id) {
+        userRepository.deleteUser(id);
     }
 
     @Override
-    @Transactional
-    public void removeUser(Long id) {
-        this.userDao.removeUser(id);
+    public void editUser(User user) {
+        userRepository.editUser(user);
     }
-
+    @Transactional(readOnly=true)
     @Override
-    public User findUserById(Long id) {
-        return this.userDao.findUserById(id);
+    public User getUserById(Long id) {
+        return userRepository.getUserById(id);
     }
-
+    @Transactional(readOnly=true)
     @Override
-    public List<User> getListUsers() {
-        return this.userDao.getListUsers();
+    public List<User> getAllUsers() {
+        return userRepository.getAllUsers();
     }
-
+    @Transactional(readOnly=true)
     @Override
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public UserDetails loadUserByUsername(String username) {
-        User user = userDao.findUserByUsername(username);
-        return user;
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        return userRepository.getUserByUsername(username);
     }
-
 }

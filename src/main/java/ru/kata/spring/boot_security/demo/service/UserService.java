@@ -1,20 +1,19 @@
 package ru.kata.spring.boot_security.demo.service;
 
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import ru.kata.spring.boot_security.demo.model.User;
 
-import javax.transaction.Transactional;
 import java.util.List;
 
 public interface UserService extends UserDetailsService {
-
     void addUser(User user);
 
-    void updateUser(User user);
+    void deleteUser(Long id);
 
-    void removeUser(Long id);
+    void editUser(User user);
 
-    User findUserById(Long id);
+    User getUserById(Long id);
 
-    List<User> getListUsers();
+    List<User> getAllUsers();
 }

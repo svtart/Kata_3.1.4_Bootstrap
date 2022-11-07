@@ -1,61 +1,69 @@
 package ru.kata.spring.boot_security.demo.configs;
 
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.factory.PasswordEncoderFactories;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import ru.kata.spring.boot_security.demo.service.UserService;
+
 
 @Configuration
 @EnableWebSecurity
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     private final SuccessUserHandler successUserHandler;
+    private final UserService userService;
+    private  final BCryptPasswordEncoder passwordEncoder;
 
-    private UserDetailsService userService;
 
 
-    @Autowired
-    public void setUserService(UserDetailsService userService) {
-        this.userService = userService;
-    }
-
-    public WebSecurityConfig(SuccessUserHandler successUserHandler) {
+    public WebSecurityConfig(SuccessUserHandler successUserHandler, UserService userService,BCryptPasswordEncoder passwordEncoder) {
         this.successUserHandler = successUserHandler;
+        this.userService = userService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        http
+    protected void configure(HttpSecurity httpSecurity) throws Exception {
+        httpSecurity
+                .csrf()
+                .disable()
                 .authorizeRequests()
-                .antMatchers("/").permitAll()
-                .antMatchers("/user").hasAnyRole("USER", "ADMIN")
+                //Доступ только для не зарегистрированных пользователей
+                .antMatchers("/login").not().fullyAuthenticated()
+                //Доступ только для пользователей с ролью Администратор
                 .antMatchers("/admin/**").hasRole("ADMIN")
+                //Доступ для юзера
+                .antMatchers("/user/**").hasAnyRole("ADMIN", "USER")
+                //Доступ разрешен всем пользователей
+                .antMatchers("/").permitAll()
+                .antMatchers("/registration").permitAll()
+                .antMatchers("/index").permitAll()
+
+                //Все остальные страницы требуют аутентификации
                 .anyRequest().authenticated()
                 .and()
+                //Настройка для входа в систему
                 .formLogin().successHandler(successUserHandler)
+                //Перенарпавление на главную страницу после успешного входа
+                .defaultSuccessUrl("/")
                 .permitAll()
                 .and()
                 .logout()
-                .permitAll();
+                .permitAll()
+                .logoutSuccessUrl("/")
+                .and().csrf().disable();
     }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
-    }
 
     @Bean
-    public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setPasswordEncoder(passwordEncoder());
-        provider.setUserDetailsService(userService);
-        return provider;
+    public DaoAuthenticationProvider daoAuthenticationProvider() {
+        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
+        authenticationProvider.setPasswordEncoder(passwordEncoder);
+        authenticationProvider.setUserDetailsService(userService);
+        return authenticationProvider;
     }
 }
